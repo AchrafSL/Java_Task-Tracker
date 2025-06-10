@@ -1,0 +1,463 @@
+package org.example.Models;
+
+import org.example.Utils.TaskStatus;
+
+import java.time.LocalDate;
+
+public class Task {
+    Integer id;
+    String description;
+    TaskStatus status;
+    LocalDate createdAt,updatedAt;
+
+
+
+    public Task(Integer id, String description, TaskStatus status, LocalDate createdAt, LocalDate updatedAt) {
+        this.id = id;
+        this.description = description;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public String toJsonElem()
+    {
+        return "{" +
+                "\"id\":" + id + "," +
+                "\"description\":\"" + description + "\"," +
+                "\"status\":\"" + status + "\"," +
+                "\"createdAt\":\"" + createdAt + "\"," +
+                "\"updatedAt\":\"" + updatedAt + "\"" +
+                "}";
+    }
+
+
+    public static Task toTaskElem(String jsonElem)
+    {
+        String[] elemts = jsonElem.split(",");
+        String[] taskE = new String[5];
+        for(int i = 0; i < 5;i++)
+        {
+
+          taskE[i] = elemts[i].split(":",2)[1];
+
+        }
+        taskE[4] = taskE[4].replace("}","");
+
+        if(taskE[4].equals("null"))
+            return new Task(Integer.parseInt(taskE[0]),taskE[1].replace("\"",""), TaskStatus.valueOf(taskE[2].replace("\"", "") )  , LocalDate.parse(taskE[3].replace("\"", "")),LocalDate.parse(taskE[4].replace("\"", ""))  );
+        else
+            return new Task(Integer.parseInt(taskE[0]),taskE[1].replace("\"",""), TaskStatus.valueOf(taskE[2].replace("\"", "") )  , LocalDate.parse(taskE[3].replace("\"", "")),null  );
+    }
+
+
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TaskStatus status) {
+        this.status = status;
+    }
+
+    public LocalDate getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDate createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDate getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDate updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}
+package org.example.Utils;
+
+import org.example.Models.Task;
+
+import java.io.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
+
+public class TaskManager {
+
+    final static String fileName = "task.json";
+
+
+
+    //Get the next ID:
+    public static Integer getNextId()
+    {
+        List<Task> tasks = readAllTasks();
+
+        int maxId = 0;
+        for (Task task : tasks) {
+            if (task.getId() > maxId) {
+                maxId = task.getId();
+            }
+        }
+        return maxId + 1;
+    }
+
+
+
+    //add Task ( Another version )
+    public static void addTask(String description)
+    {
+        LocalDate createdAt = LocalDate.now();
+        Integer idT = getNextId();
+
+        addTask(new Task(idT,description,TaskStatus.TODO,createdAt,null));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //addTask ( CREATE )
+    public static void addTask(Task task)
+    {
+        String data = task.toJsonElem();
+
+        try {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName,"rw");
+
+            //Check if the file is empty:
+            if(randomAccessFile.read() == -1)
+            {
+                randomAccessFile.write("[".getBytes());
+                randomAccessFile.write(data.getBytes());
+                randomAccessFile.write("]".getBytes());
+            }
+            else{
+                // Delete the lastChar and replace it with ,
+                randomAccessFile.seek(randomAccessFile.length() - 1);
+                randomAccessFile.write(",".getBytes());
+                randomAccessFile.write(data.getBytes());
+                randomAccessFile.write("]".getBytes());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+
+
+
+
+
+    // updateTask ( UPDATE )
+    public static void updateTask(String newTaskDesc,Integer taskID)
+    {
+        //Check if that task exist:
+        List<Task> taskList = readAllTasks();
+        boolean exits = false;
+        int index = 0;
+        for(Task e:taskList)
+        {
+            if (e.getId().equals(taskID)) {
+                exits = true;
+                break;
+            }
+            index ++;
+
+        }
+
+
+        // if so update the values:
+        if(exits)
+        {
+            taskList.get(index).setDescription(newTaskDesc);
+            taskList.get(index).setUpdatedAt(LocalDate.parse(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)));
+            writeAllTasks(taskList);
+
+        }
+        // print: Error ( Task doesn't exist )
+        else{
+            System.out.println("Task doesn't exist!");
+        }
+
+
+
+
+
+
+    }
+
+
+
+
+
+    //Read All Tasks:
+    public static List<Task> readAllTasks()
+    {
+        List<Task> taskList = new ArrayList<>();
+        try {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
+            randomAccessFile.seek(0);
+
+            byte [] bytes= new byte[(int) randomAccessFile.length()];
+            randomAccessFile.readFully(bytes);
+
+            String fileData = new String(bytes);
+
+            // Define the regex pattern
+            Pattern pattern = Pattern.compile("\\{.*?\\}", Pattern.DOTALL);
+            Matcher matcher = pattern.matcher(fileData);
+
+            // Find all matches
+            while (matcher.find()) {
+                taskList.add(Task.toTaskElem(matcher.group()));
+            }
+
+
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        return taskList;
+    }
+
+
+
+
+
+
+
+    //Write All Tasks:
+    public static void writeAllTasks(List<Task> TaskList)
+    {
+        //Delete all tasks:
+        try
+        {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName,"rw");
+            randomAccessFile.setLength(0);
+
+            for(Task e:TaskList)
+            {
+                TaskManager.addTask(e);
+            }
+
+
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+
+    }
+
+
+
+    public static void deleteTask(Integer id)
+    {
+        List<Task> taskList = readAllTasks();
+
+        taskList.removeIf(task-> task.getId().equals(id));
+
+        writeAllTasks(taskList);
+
+    }
+
+
+    // list All tasks:
+    public static void listAllTasks()
+    {
+        List<Task> taskL = readAllTasks();
+
+        taskL.stream().map(task -> task.toJsonElem()).forEach(System.out::println);
+    }
+
+
+    public static void listAllTasks(TaskStatus status)
+    {
+        List<Task> taskL = readAllTasks();
+        taskL.stream()
+                .filter(task -> task.getStatus().equals(status))
+                .map(task -> task.toJsonElem())
+                .forEach(System.out::println);
+    }
+
+
+    public static void mark(TaskStatus status, Integer id)
+    {
+        List<Task> taskL = readAllTasks();
+
+        taskL.stream()
+                .filter(task -> task.getId().equals(id))
+                .forEach(task -> task.setStatus(status));
+
+        writeAllTasks(taskL);
+
+
+    }
+
+
+
+}
+package org.example.Utils;
+
+public enum TaskStatus {
+    TODO,
+    IN_PROGRESS ,
+    DONE
+
+
+}
+package org.example;
+
+import org.example.Models.Task;
+import org.example.Utils.TaskStatus;
+import org.example.Utils.TaskManager;
+import java.time.LocalDate;
+import java.util.List;
+
+//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
+// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+public class Main {
+
+    public static boolean isNumber(String str)
+    {
+        try {
+            Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+
+
+    public static void main(String[] args)
+    {
+        if (0 == args.length || isNumber(args[0]) )
+        {
+            System.out.println("Unknown command. Use 'task-cli help' for usage.");
+            return;
+        }
+
+        switch (args[0].toLowerCase()){
+
+            case "add":
+                if (args.length != 2) {
+                    System.out.println("Usage: task-cli add \"Task description\"");
+                    return;
+                }
+                TaskManager.addTask(args[1]);
+                break;
+
+            case "update":
+                if (args.length != 3 || !isNumber(args[1])) {
+                    System.out.println("Usage: task-cli update <id> \"New description\"");
+                    return;
+                }
+                TaskManager.updateTask(args[2],Integer.parseInt(args[1]));
+                break;
+
+            case "delete":
+                if (args.length != 2 || !isNumber(args[1])) {
+                    System.out.println("Usage: task-cli delete <id>");
+                    return;
+                }
+                TaskManager.deleteTask(Integer.parseInt(args[1]));
+                break;
+
+            case "list":
+                if (args.length == 1)
+                TaskManager.listAllTasks();
+                else if (args.length == 2 && ( args[1].equalsIgnoreCase("done") || args[1].equalsIgnoreCase("todo") || args[1].equalsIgnoreCase("in-progress") ) )
+                {
+                    TaskStatus ele = args[1].equalsIgnoreCase("in-progress")?TaskStatus.IN_PROGRESS:TaskStatus.valueOf(args[1].toUpperCase());
+                    TaskManager.listAllTasks(ele);
+
+                }
+                else
+                    System.out.println("Usage: task-cli list {for general listing}\n{for more specific listing} task-cli list [done|todo|in-progress]");
+                break;
+
+            case "mark-in-progress":
+                if(args.length != 2 ||  !isNumber(args[1]))
+                {
+                    System.out.println("Usage: task-cli mark-in-progress <id>");
+                    return;
+                }
+                TaskManager.mark(TaskStatus.IN_PROGRESS,Integer.parseInt(args[1]));
+                break;
+
+
+            case "mark-done":
+                if(args.length != 2 || !isNumber(args[1]))
+                {
+                    System.out.println("Usage: task-cli mark-done <id>");
+                    return;
+                }
+                TaskManager.mark(TaskStatus.DONE,Integer.parseInt(args[1]));
+                break;
+
+
+
+            case "help":
+                System.out.println("Usage:");
+                System.out.println("  task-cli add \"Task description\"");
+                System.out.println("  task-cli update <id> \"New description\"");
+                System.out.println("  task-cli delete <id>");
+                System.out.println("  task-cli list [done|todo|in-progress]");
+                System.out.println("  task-cli mark-in-progress <id>");
+                System.out.println("  task-cli mark-done <id>");
+                break;
+
+
+            default:
+                System.out.println("Unknown command. Use 'task-cli help' for usage.");
+
+
+
+
+
+
+        }
+
+    }
+} 
