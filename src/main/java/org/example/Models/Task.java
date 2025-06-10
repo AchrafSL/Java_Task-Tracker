@@ -10,6 +10,8 @@ public class Task {
     TaskStatus status;
     LocalDate createdAt,updatedAt;
 
+
+
     public Task(Integer id, String description, TaskStatus status, LocalDate createdAt, LocalDate updatedAt) {
         this.id = id;
         this.description = description;
@@ -37,15 +39,15 @@ public class Task {
         for(int i = 0; i < 5;i++)
         {
 
-          taskE[i] = elemts[i].split(":",2)[1]  ;
-          System.out.println(taskE[i]);
+          taskE[i] = elemts[i].split(":",2)[1];
 
         }
         taskE[4] = taskE[4].replace("}","");
 
-
-       return new Task(Integer.parseInt(taskE[0]),taskE[1].replace("\"",""), TaskStatus.valueOf(taskE[2].replace("\"", "") )  , LocalDate.parse(taskE[3].replace("\"", "")),LocalDate.parse(taskE[4].replace("\"", ""))  );
-
+        if(taskE[4].equals("null"))
+            return new Task(Integer.parseInt(taskE[0]),taskE[1].replace("\"",""), TaskStatus.valueOf(taskE[2].replace("\"", "") )  , LocalDate.parse(taskE[3].replace("\"", "")),LocalDate.parse(taskE[4].replace("\"", ""))  );
+        else
+            return new Task(Integer.parseInt(taskE[0]),taskE[1].replace("\"",""), TaskStatus.valueOf(taskE[2].replace("\"", "") )  , LocalDate.parse(taskE[3].replace("\"", "")),null  );
     }
 
 
